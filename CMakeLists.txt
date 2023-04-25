@@ -5,6 +5,8 @@ find_package(catkin REQUIRED
         COMPONENTS
         roscpp
         rm_msgs
+        rm_common
+        urdf
         )
 
 
@@ -14,6 +16,8 @@ catkin_package(
         CATKIN_DEPENDS
         roscpp
         rm_msgs
+        rm_common
+        urdf
 )
 
 include_directories(

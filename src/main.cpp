@@ -6,9 +6,9 @@
 
 int main(int argc, char** argv)
 {
-  auto* test_jig_manual = new rm_auto_aim_test_jig::AutoAimTestJigManual;
   ros::init(argc, argv, "rm_auto_aim_test_jig");
   ros::NodeHandle nh("~");
+  auto* test_jig_manual = new rm_auto_aim_test_jig::AutoAimTestJigManual(nh);
   ros::Rate loop_rate(100);
   while (ros::ok())
   {

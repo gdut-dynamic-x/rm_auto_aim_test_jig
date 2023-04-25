@@ -29,6 +29,8 @@
   <buildtool_depend>catkin</buildtool_depend>
   <depend>roscpp</depend>
   <depend>rm_msgs</depend>
+  <depend>rm_common</depend>
+  <depend>urdf</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
