@@ -21,12 +21,19 @@ public:
   void run();
 
 private:
+  enum class STATE
+  {
+    IDLE,
+    NORMAL
+  } state_;
   void dbusDataCallback(const rm_msgs::DbusData::ConstPtr& data);
   void jointStateCallback(const sensor_msgs::JointState::ConstPtr& data);
   urdf::JointConstSharedPtr move_joint_urdf_;
   sensor_msgs::JointState joint_state_;
   double move_scale_, top_scale_;
   double auto_move_vel_ = 0., auto_top_vel_ = 0.;
+  int auto_move_direction_ = 1;
+  bool remote_is_open_ = false;
   rm_common::JointPointCommandSender *top_sender_, *move_sender_;
   rm_common::CalibrationQueue* move_calibration_;
   rm_common::ControllerManager controller_manager_;

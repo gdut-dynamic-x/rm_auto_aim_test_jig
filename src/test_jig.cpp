@@ -25,13 +25,15 @@ AutoAimTestJigManual::AutoAimTestJigManual(ros::NodeHandle& nh) : controller_man
   top_sender_ = new rm_common::JointPointCommandSender(nh_top, joint_state_);
   dbus_sub_ = nh.subscribe<rm_msgs::DbusData>("/dbus_data", 10, &AutoAimTestJigManual::dbusDataCallback, this);
   joint_state_sub_ =
-      nh.subscribe<sensor_msgs::JointState>("/joint_state", 10, &AutoAimTestJigManual::jointStateCallback, this);
+      nh.subscribe<sensor_msgs::JointState>("/joint_states", 10, &AutoAimTestJigManual::jointStateCallback, this);
   controller_manager_.startStateControllers();
+  state_ = STATE::IDLE;
 }
 
 void AutoAimTestJigManual::run()
 {
   move_calibration_->update(ros::Time::now());
+  controller_manager_.update();
 }
 
 void AutoAimTestJigManual::dbusDataCallback(const rm_msgs::DbusData::ConstPtr& data)
@@ -39,14 +41,23 @@ void AutoAimTestJigManual::dbusDataCallback(const rm_msgs::DbusData::ConstPtr& d
   double move_vel = 0., top_vel = 0.;
   if (ros::Time::now() - data->stamp < ros::Duration(0.2))
   {
-    if (data->s_r == rm_msgs::DbusData::DOWN)
+    if (!remote_is_open_)
+    {
+      remote_is_open_ = true;
+      controller_manager_.startMainControllers();
+      state_ = STATE::IDLE;
+    }
+    if (data->s_r == rm_msgs::DbusData::DOWN && state_ == STATE::IDLE)
+    {
       move_calibration_->reset();
-    else if (data->s_r == rm_msgs::DbusData::MID)
+      state_ = STATE::NORMAL;
+    }
+    else if (data->s_r == rm_msgs::DbusData::MID && state_ == STATE::NORMAL)
     {
       move_vel = data->ch_r_x * move_scale_;
       top_vel = data->ch_l_x * top_scale_;
     }
-    else if (data->s_r == rm_msgs::DbusData::UP)
+    else if (data->s_r == rm_msgs::DbusData::UP && state_ == STATE::NORMAL)
     {
       auto_move_vel_ += data->ch_r_x;
       auto_top_vel_ += data->ch_l_x;
@@ -60,14 +71,18 @@ void AutoAimTestJigManual::dbusDataCallback(const rm_msgs::DbusData::ConstPtr& d
         auto_top_vel_ = -top_scale_;
       top_vel = auto_top_vel_;
       if (std::abs(move_joint_urdf_->safety->soft_upper_limit - joint_state_.position[move_sender_->getIndex()]) < 0.1)
-        move_vel = -auto_move_vel_;
+        auto_move_direction_ = -1;
       else if (std::abs(move_joint_urdf_->safety->soft_lower_limit - joint_state_.position[move_sender_->getIndex()]) <
                0.1)
-        move_vel = auto_move_vel_;
+        auto_move_direction_ = 1;
+      move_vel = auto_move_vel_ * auto_move_direction_;
     }
   }
   else
   {
+    remote_is_open_ = false;
+    controller_manager_.stopMainControllers();
+    controller_manager_.stopCalibrationControllers();
     move_vel = 0;
     top_vel = 0.;
   }
